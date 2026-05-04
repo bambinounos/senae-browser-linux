@@ -290,7 +290,7 @@ docker run --rm -v senae-profile:/data -v $(pwd):/backup ubuntu \
   tar czf /backup/senae-backup.tar.gz /data
 ```
 
-> ⚠️ **Trampa común al iterar**: si modificas el `Dockerfile` (cambias `prefs.js`, agregas configuración Java), Docker copia el contenido baked-in al volumen **solo la primera vez** que el volumen no existe. Para que tus cambios surtan efecto, usa `RESET=1 ./run.sh`.
+> ⚠️ **Trampa común al iterar**: si modificas el `Dockerfile` (cambios al `prefs.js`, libs del sistema, configuración Java/Flash, plugins), tienes que invalidar el perfil cacheado. Docker copia el contenido baked-in al volumen **solo la primera vez** que el volumen no existe; además, Firefox guarda en el perfil el resultado del plugin scan, así que si la imagen anterior tenía dependencias rotas, ese resultado queda cacheado. Para forzar todo: `RESET=1 ./run.sh`.
 
 ---
 
@@ -310,7 +310,28 @@ Verifica en `./run.sh about:plugins` que aparezcan:
 - **Java(TM) Platform SE 7 U80** — Estado: Siempre activar.
 - **Shockwave Flash 25.0 r0** — Estado: Siempre activar.
 
-Si Flash no aparece, revisar que `libflashplayer.so` es 64-bit:
+#### Si Flash no aparece en `about:plugins`
+
+Sigue estos pasos en orden:
+
+**Paso 1 — Reset del perfil**: Firefox cachea el resultado del plugin scan dentro del perfil. Si reconstruiste la imagen (por ejemplo agregaste libs), el cache puede estar obsoleto:
+
+```bash
+RESET=1 ./run.sh about:plugins
+```
+
+**Paso 2 — Verificar dependencias de la imagen**: Flash 25 NPAPI requiere `libGL.so.1`, `libnss3.so`, `libsmime3.so`, `libssl3.so`, `libnspr4.so`. Si alguna falta, Firefox carga silenciosamente (no aparece, sin error visible):
+
+```bash
+docker run --rm --entrypoint /bin/bash senae-browser:latest -c \
+  'ldd /opt/flash/libflashplayer.so | grep "not found"'
+# Output esperado: vacio (ninguna falta)
+```
+
+Si aparecen libs faltantes, el Dockerfile no las incluye — abrir issue en GitHub.
+
+**Paso 3 — Verificar el binario**:
+
 ```bash
 file libflashplayer.so
 # Debe decir: ELF 64-bit LSB shared object, x86-64

@@ -43,3 +43,29 @@ The image is single-stage `ubuntu:24.04`. A few wiring details that aren't obvio
 - Don't "modernize" Firefox, Java, or Flash versions. The whole point is bug-for-bug compatibility with what Ecuapass expects; newer Firefox dropped NPAPI in 52, newer Java has no browser plugin at all.
 - Don't add `--no-install-recommends` exceptions casually; the GTK2 / libxt / libasound stack is the minimum to run Firefox 41 GUI inside the container, and Firefox 41 silently fails to start if any of these are missing.
 - WSL2 is listed as "partial" support — GUI requires WSLg. If a user reports the browser window not appearing, the first thing to check is `DISPLAY` and whether they're on Wayland without XWayland installed.
+
+## Hard-won gotchas (lessons from real debugging)
+
+These are subtleties not obvious from reading the code — easy to regress if you don't know:
+
+### 1. Flash 25 NPAPI requires `libgl1`, `libnss3`, `libnspr4`
+
+The Dockerfile installs these three explicitly. **Don't drop them when refactoring** — Flash uses Mozilla's NSS for crypto and Mesa's libGL for rendering. Without them, the dynamic linker fails to load `libflashplayer.so` and Firefox **silently** omits Flash from `about:plugins` with no error visible to the user. To verify after any image change:
+
+```bash
+docker run --rm --entrypoint /bin/bash senae-browser:latest -c \
+  'ldd /opt/flash/libflashplayer.so | grep "not found"'
+# Must return nothing
+```
+
+### 2. The X11 socket GID is NOT the directory GID
+
+`run.sh` derives the GID for `--group-add` so the container user `senae` (UID 1001) can access the host's X11 socket. The trap: **`/tmp/.X11-unix` itself is `root:root` (GID 0)**, but the actual socket file `/tmp/.X11-unix/Xn` inside is owned by the user that started X (typically GID 1000). If you `stat -c '%g' /tmp/.X11-unix` you get `0`, which makes `--group-add 0` and the container can't connect — failure mode is generic "cannot open display :0". You have to `stat` the socket file specifically (`X${DISPLAY_NUM}`).
+
+### 3. `RESET=1` is not just for `prefs.js` iteration
+
+The original purpose was: Docker only copies the image's baked-in profile to the volume on first creation. So edits to `prefs.js` don't apply unless you wipe the volume. **But there's a second reason**: Firefox caches the result of plugin discovery inside the profile. If you previously built an image with broken plugin dependencies (Flash didn't load), then fix the deps and rebuild, Firefox still shows Flash as missing because it trusts its cache. `RESET=1` invalidates both at once. Document this whenever the `RESET=1` flag comes up — users hit this surprisingly often.
+
+### 4. Snap-confined `gh` cannot operate in paths with spaces
+
+If the repo lives at a path containing a space (e.g. `Antigravity Google/...`), `gh` from snap fails with "current directory is not a git repository" even when `git status` works fine. Workaround: use the GitHub REST API directly with `curl` (token via `gh auth token`), or move the repo to a space-free path.
