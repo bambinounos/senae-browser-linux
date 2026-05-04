@@ -1,0 +1,24 @@
+# Binarios de terceros que NO se redistribuyen (descarga manual)
+jre-7u80-linux-x64.tar.gz
+jdk-7u80-linux-x64.tar.gz
+libflashplayer.so
+
+# Artefactos locales
+*.tmp
+*.log
+fp_*.zip
+flashplayer*.tar.gz
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# IDE / editores
+.vscode/
+.idea/
+*.code-workspace
+
+# Plan files internos
+.claude/plans/
