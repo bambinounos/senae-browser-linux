@@ -22,6 +22,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libnss3 \
     libnspr4 \
+    desktop-file-utils \
+    xdg-utils \
     ca-certificates \
     curl \
     wget \
@@ -94,7 +96,11 @@ RUN mkdir -p /home/senae/.senae-profile && \
     echo 'user_pref("plugin.state.libflashplayer", 2);' >> /home/senae/.senae-profile/prefs.js && \
     echo 'user_pref("plugin.scan.plid.all", true);' >> /home/senae/.senae-profile/prefs.js && \
     echo 'user_pref("security.mixed_content.block_active_content", false);' >> /home/senae/.senae-profile/prefs.js && \
-    echo 'user_pref("browser.startup.homepage", "https://ecuapass.aduana.gob.ec");' >> /home/senae/.senae-profile/prefs.js
+    echo 'user_pref("browser.startup.homepage", "https://ecuapass.aduana.gob.ec");' >> /home/senae/.senae-profile/prefs.js && \
+    echo 'user_pref("browser.download.folderList", 2);' >> /home/senae/.senae-profile/prefs.js && \
+    echo 'user_pref("browser.download.dir", "/home/senae/Descargas");' >> /home/senae/.senae-profile/prefs.js && \
+    echo 'user_pref("browser.download.useDownloadDir", true);' >> /home/senae/.senae-profile/prefs.js && \
+    mkdir -p /home/senae/Descargas
 
 # Plugins accesibles para el perfil
 RUN mkdir -p /home/senae/.mozilla/plugins && \

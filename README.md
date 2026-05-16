@@ -234,6 +234,25 @@ docker stop senae-browser
 
 `run.sh` arranca con `--rm`, así que el container se elimina solo al detenerse (los datos del perfil persisten en el volumen).
 
+### Descargar y subir archivos (carpeta compartida)
+
+El contenedor tiene su propio sistema de archivos aislado: lo que Firefox ve en `/home/senae/...` **no** es tu computadora. Para intercambiar archivos con Ecuapass (descargar comprobantes/declaraciones, subir documentos), `run.sh` monta automáticamente una carpeta compartida:
+
+| En tu computadora (host) | Dentro de Firefox (contenedor) |
+|---|---|
+| `~/SENAE/` | `/home/senae/Descargas/` |
+
+- **Descargas**: Firefox guarda automáticamente en esa carpeta sin preguntar (`browser.download.useDownloadDir`). Las ves en tu explorador normal en `~/SENAE/`.
+- **Subidas**: pon el archivo en `~/SENAE/` en tu host; en el selector de Firefox navega a `/home/senae/Descargas/`.
+
+Para usar otra ubicación:
+
+```bash
+SENAE_DIR=/home/usuario/Documentos/Aduana ./run.sh
+```
+
+> ℹ️ La carpeta se crea con `chmod 777` porque el usuario `senae` dentro del contenedor (UID 1001) no coincide con tu UID del host. Es una carpeta local de intercambio en tu propia máquina, no un riesgo de red.
+
 ---
 
 ## Arquitectura

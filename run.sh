@@ -26,12 +26,20 @@ DISP_NUM=$(echo "$DISPLAY" | sed -E 's/^[^:]*:([0-9]+).*/\1/')
 X11_SOCKET="/tmp/.X11-unix/X${DISP_NUM:-0}"
 X11_GID=$(stat -c '%g' "$X11_SOCKET" 2>/dev/null || echo 1000)
 
+# Carpeta compartida host <-> container para descargas y subidas de Ecuapass.
+# Por defecto ~/SENAE; sobreescribible con SENAE_DIR=/otra/ruta ./run.sh
+# chmod 777 porque el usuario "senae" del container (UID 1001) != tu UID del host.
+SENAE_DIR="${SENAE_DIR:-$HOME/SENAE}"
+mkdir -p "$SENAE_DIR"
+chmod 777 "$SENAE_DIR"
+
 docker run --rm --init \
     -e DISPLAY="$DISPLAY" \
     -e XAUTHORITY=/tmp/.docker-xauth \
     -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
     -v "$XAUTH_FILE:/tmp/.docker-xauth:ro" \
     -v senae-profile:/home/senae/.senae-profile \
+    -v "$SENAE_DIR:/home/senae/Descargas:rw" \
     --group-add "$X11_GID" \
     --name senae-browser \
     senae-browser:latest "$@"
